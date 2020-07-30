@@ -4,14 +4,21 @@ import Validator from './validator'
 class Game {
   constructor(board, live) {
     this.board = this.generateUnfrozenBoard(board);
-    this.live = live;
     this.givenNumberCoordinates = this.collectGivenNumberCoordinates()
     this.numberOfMoves = 0
-    this.invalidBoard = false
     this.states = []
+    this.live = live;
+    this.invalidBoard = false
+    this.solving = false;
   }
 
   solve(row = 0, col = 0) {
+    this.solving = true;
+    if (this.numberOfMoves > 200_000) {
+      this.invalidBoard = true;
+      return false
+    }
+
     if (this.numberOfMoves === 0 && !new Validator(this.board).valid()) {
       this.invalidBoard = true;
       return false
@@ -36,7 +43,10 @@ class Game {
         if (this.live) {
           this.states.push(this.generateUnfrozenBoard(this.board))
         }
-        if (validator.complete()) { return true }
+        if (validator.complete()) {
+          this.solving = false;
+          return true 
+        }
         if (this.solve(nextStep.row, nextStep.col)) { return true }
       }
       sudokuNumber++

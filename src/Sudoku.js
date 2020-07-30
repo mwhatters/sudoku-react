@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import produce from "immer"
+import logo from './logo.svg';
 import './Sudoku.css';
 import Game from './lib/sudoku/game'
 
@@ -12,23 +13,27 @@ const generateNewBoard = () => {
 }
 
 const Sudoku = () => {
+  const [board, setBoard] = useState(() => generateNewBoard())
   const [solving, setSolving] = useState(false)
+  const [live, setLive] = useState(false)
   const [invalid, setInvalid] = useState(false)
   const [numMoves, setNumMoves] = useState(0)
-  const [board, setBoard] = useState(() => generateNewBoard())
 
-  const solveBoard = (live) => {
+  const solveBoard = async (liveReplay) => {
     setSolving(true)
+    setLive(liveReplay)
 
-    let game = new Game(board, live)
+    let game = new Game(board, liveReplay)
     game.solve()
     if (game.invalidBoard) {
       setInvalid(true)
       return;
     }
 
-    if (live) {
-      replayGame(game)
+    if (liveReplay) {
+      await replayGame(game)
+      setSolving(false)
+      setLive(false)
     } else {
       setBoard(game.board)
       setNumMoves(game.numberOfMoves)
@@ -42,18 +47,20 @@ const Sudoku = () => {
     setNumMoves(0)
   }
 
-  const replayGame = (game) => {
+  const replayGame = async (game) => {
     let i = 0;
-    let interval = setInterval(function () {
-      let move = game.states[i];
-      setBoard(move)
-      setNumMoves(i)
-      i++;
-      if (i === game.states.length) {
-        clearInterval(interval)
-        game.states = []
-      }
-    }, 1);
+    return await new Promise(resolve => {
+      const interval = setInterval(() => {
+        let move = game.states[i];
+        setBoard(move)
+        setNumMoves(i)
+        i++;
+        if (i === game.states.length) {
+          resolve(game.states = [])
+          clearInterval(interval)
+        }
+      }, 1);
+    });
   }
 
   return (
@@ -95,12 +102,16 @@ const Sudoku = () => {
       <div style={{ display: 'flex', flexDirection: 'column', padding: 20, width: '100px' }}>
         <button onClick={() => solveBoard()}>Solve</button>
         <div style={{ height: 20 }}/>
-        <button onClick={() => solveBoard(true)}>Solve Live</button>
+        <button onClick={() => solveBoard(true)}>Solve (Live Replay)</button>
         <div style={{ height: 20 }}/>
         <button onClick={() => resetBoard()}>Reset</button>
         <div style={{ height: 20 }}/>
-        {invalid ? "Invalid Board" : ""}
-        {numMoves ? `Moves: ${numMoves}` : ''}
+        {solving && live 
+          ? <img src={logo} className="App-logo o__small" alt="logo" />
+          : ""
+        }
+        {invalid ? "Invalid Board" : ""}<br/>
+        {numMoves ? `Moves: ${numMoves}` : ''}<br/>
       </div>
     </div>
   )
